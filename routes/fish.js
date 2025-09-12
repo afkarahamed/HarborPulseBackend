@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const asyncHandler = require("../middleware/asyncHandler");
 
 let fishSpecies = [
     { id: 1, name: "Tuna"},
@@ -14,18 +15,18 @@ let fishSpeciesPrice = [
     { speciesId: 1, fishSpeciesId: 1, price: 14.00 }
 ];
 
-router.get("/species", (req, res) => {
+router.get("/species", asyncHandler(async (req, res) => {
     res.json(fishSpecies);
-});
+}));
 
-router.get("/prices", (req, res) =>{
+router.get("/prices", asyncHandler(async (req, res) => {
     res.json({success:"true",
         date: "2025-09-10",
         items: fishSpeciesPrice
     });
-})
+}));
 
-router.get("/prices/:speciesId", (req, res) =>{
+router.get("/prices/:speciesId", asyncHandler(async (req, res) => {
     let fishPrice = fishSpeciesPrice.filter(
         (fish) => fish.fishSpeciesId == parseInt(req.params.speciesId))
         .map((fish) => { return fish.price });
@@ -35,6 +36,6 @@ router.get("/prices/:speciesId", (req, res) =>{
     }
     res.json(fishPrice);
 
-});
+}));
 
 module.exports = router;
