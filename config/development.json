@@ -1,0 +1,8 @@
+{
+  "db": {
+    "host": "localhost",
+    "user": "root",
+    "password": "harborpulse123",
+    "name": "harborpulse"
+  }
+}

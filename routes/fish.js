@@ -32,7 +32,7 @@ router.get("/prices/:speciesId", asyncHandler(async (req, res) => {
         .map((fish) => { return fish.price });
 
     if(!fishPrice.length){
-        return res.status(404).json({message: "Fish species not found"});
+        throw new Error("Species not found");
     }
     res.json(fishPrice);
 
