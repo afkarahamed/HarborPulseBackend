@@ -4,6 +4,8 @@ const config = require("config");
 
 
 require("./startup/routes")(app);
+require("./startup/dbStartup")();
+
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });

@@ -12,4 +12,9 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-module.exports = pool;
+async function checkConnection(){
+    const [rows] = await pool.query("SELECT 1 + 1 AS result");
+    return rows[0].result === 2;
+}
+
+module.exports = { pool, checkConnection }; 
