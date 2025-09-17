@@ -1,5 +1,5 @@
 const {pool, checkConnection} = require("../database/db");
-
+const log = require("../startup/logging");
 
 module.exports = (async ()=>{
     try{
@@ -7,9 +7,9 @@ module.exports = (async ()=>{
         if(!isConnected)
             throw new Error("Database Connection Failed");
 
-        console.log("Database Connected");
+        log.info("Database Connected");
     }catch(err){
-        console.error("DATABASE ERROR: ", err.message);
+        log.error("DATABASE ERROR: ", err.message);
         process.exit(1);
     }
 });

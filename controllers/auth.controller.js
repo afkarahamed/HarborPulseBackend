@@ -1,6 +1,12 @@
 const {pool} = require("../database/db");
 const bcrypt = require("bcryptjs");
 
+const config = require("config");
+const jwt = require("jsonwebtoken");
+
+const jwtSecret = config.get("jwt.secret");
+const jwtExpiresIn = config.get("jwt.expiresIn");
+
 
 exports.registerUser = async(req, res) =>{
     const {username, password} = req.body;
@@ -73,15 +79,19 @@ exports.loginUser = async (req, res) => {
         throw err;
     }
 
-    const token = `dummy-token-${user.user_id}`;
+    const token = jwt.sign(
+        {userId: user.userId, role: user.role },
+        jwtSecret,
+        {expiresIn: jwtExpiresIn}
+    );
 
     res.json({
         success: true,
         token,
         user: {
-        user_id: user.user_id,
-        username: user.username,
-        role: user.role
+            user_id: user.user_id,
+            username: user.username,
+            role: user.role
         }
     });
 }
