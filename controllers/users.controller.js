@@ -20,11 +20,11 @@ exports.postUsersRole = async(req, res) => {
     const {id} = req.params;
     const {role} = req.body;
 
-    if(!["user", "admin"].includes(role)){
-        return res.status(400).json({
-            error: "Role must be either 'user' or 'admin'"
-        });
-    }
+    // if(!["user", "admin"].includes(role)){
+    //     return res.status(400).json({
+    //         error: "Role must be either 'user' or 'admin'"
+    //     });
+    // }
 
     const [result] = await pool.query(`
         UPDATE users 
