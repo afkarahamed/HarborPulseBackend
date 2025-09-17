@@ -1,14 +1,34 @@
-const winston = require("winston");
+const { createLogger, format, transports } = require("winston");
 
+const logger = createLogger({
+  level: "info",
+  format: format.combine(
+    format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+    format.errors({ stack: true }),
+    format.json()
+  ),
+  defaultMeta: { service: "harborpulse-backend" },
+  transports: [
+    new transports.File({ filename: "logs/error.log", level: "error" }),
+    new transports.File({ filename: "logs/combined.log" })
+  ]
+});
 
-MediaSourceHandle.exports = function(){
-     winston.handleExceptions(
-        new winston.transports.Console({ colorize: true, prettyPrint: true }),
-        new winston.transports.File({ filename: 'uncaughtExceptions.log' }));
-    
-    process.on('unhandledRejection', (ex) => {
-        throw ex;
-    });
-    
-    winston.add(winston.transports.File, { filename: 'logfile.log' });
+if (process.env.NODE_ENV !== "production") {
+  logger.add(
+    new transports.Console({
+      format: format.combine(format.colorize(), format.simple())
+    })
+  );
 }
+
+logger.exceptions.handle(
+  new transports.File({ filename: "logs/exceptions.log" }),
+  new transports.Console()
+);
+
+process.on("unhandledRejection", (ex) => {
+  throw ex;
+});
+
+module.exports = logger;

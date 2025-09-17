@@ -1,6 +1,6 @@
-const winston = require("winston");
+const log = require("../startup/logging");
 function errorHandler(err, req, res, next) {
-    winston.error(err.stack);
+    log.error(err.stack);
     res.status(err.status || 500).json({
         success: false, 
         error:{
