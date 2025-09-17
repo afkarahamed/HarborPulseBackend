@@ -3,7 +3,7 @@ const router = express.Router();
 const asyncHandler = require("../middleware/asyncHandler");
 
 const {getHarborStatusSchema, postHarborStatusSchema } = require("../validationSchema/harbors");
-const validate = require("../middleware/harbors.validate");
+const validate = require("../middleware/validate");
 
 
 const {getHarbors, getHarborStatus, postHarborStatus} = require("../controllers/harbors.controller");

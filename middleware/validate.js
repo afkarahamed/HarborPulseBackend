@@ -12,7 +12,7 @@ module.exports = function (schemas) {
         if(schemas.body){
             const {error} = schemas.body.validate(req.body);
             if(error){
-                const err = new Error(error.details[0].messsage);
+                const err = new Error(error.details[0].message);
                 err.status = 400;
                 throw err;
             }
