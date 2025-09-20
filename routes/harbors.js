@@ -6,13 +6,14 @@ const {getHarborStatusSchema, postHarborStatusSchema } = require("../validationS
 const validate = require("../middleware/validate");
 const auth = require("../middleware/auth");
 const requireAdmin = require("../middleware/requireAdmin");
+const requireLogin = require("../middleware/requireLogin");
 
 
 const {getHarbors, getHarborStatus, postHarborStatus} = require("../controllers/harbors.controller");
 
 router.get("/", asyncHandler(getHarbors));
 
-router.get("/:id/status", validate(getHarborStatusSchema), asyncHandler(getHarborStatus));
+router.get("/:id/status", auth, requireLogin, validate(getHarborStatusSchema), asyncHandler(getHarborStatus));
 
 router.post("/:id/status", auth, requireAdmin, validate(postHarborStatusSchema), asyncHandler(postHarborStatus));
 
