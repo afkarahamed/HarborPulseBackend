@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+require('dotenv').config();
 const config = require("config");
 
 const log = require("./startup/logging");

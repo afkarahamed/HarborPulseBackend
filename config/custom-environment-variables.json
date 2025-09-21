@@ -1,0 +1,18 @@
+{
+  "jwt": {
+    "secret": "JWT_SECRET",
+    "expiresIn": "JWT_EXPIRES_IN"
+  },
+  "db": {
+    "host": "DB_HOST",
+    "port": "DB_PORT",
+    "user": "DB_USER",
+    "password": "DB_PASS",
+    "name": "DB_NAME"
+  },
+  "email": {
+    "service": "gmail",
+    "user": "EMAIL_USER",
+    "pass": "EMAIL_PASS"
+  }
+}

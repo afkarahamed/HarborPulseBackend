@@ -7,50 +7,98 @@ const jwt = require("jsonwebtoken");
 const jwtSecret = config.get("jwt.secret");
 const jwtExpiresIn = config.get("jwt.expiresIn");
 
+const sendEmail = require("../services/email");
+const {registrationOTPTemplate} = require("../services/emailTemplate");
 
-exports.registerUser = async(req, res) =>{
-    const {username, password} = req.body;
 
-    if(!username || !password){
-        const err = new Error("Username and Password are required");
-        err.status = 400;
-        throw err;
+function generateOTP(length = 6) {
+  const digits = '0123456789';
+  let otp = '';
+  for (let i = 0; i < length; i++) {
+    otp += digits[Math.floor(Math.random() * 10)];
+  }
+  return otp;
+}
+
+function generateOTPWithExpiry(minutes = 10) {
+  const otp_code = generateOTP(6);
+  const otp_expiry = new Date(Date.now() + minutes * 60 * 1000); // 2 min in ms
+  return { otp_code, otp_expiry };
+}
+
+exports.registerUser = async (req, res, next) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      const err = new Error("Email and Password are required");
+      err.status = 400;
+      throw err;
     }
 
-    const [existing] = await pool.query(`
-        SELECT user_id 
-        FROM users 
-        WHERE username= ?;
-        `, [username]);
+    const [existing] = await pool.query(
+      `SELECT user_id, is_verified FROM users WHERE email = ?`,
+      [email]
+    );
 
-    if(existing.length){
-        const err = new Error("Username already exists");
-        err.status = 400;
-        throw err;
+    if (existing.length > 0 && existing[0].is_verified) {
+      const err = new Error("Email already exists and is verified");
+      err.status = 400;
+      throw err;
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const [result] = await pool.query(`
-        INSERT INTO users
-        (username, password, role)
-        VALUES (?,?,"user");
-        `, [username, hashedPassword]);
-    
-    const insertedId = result.insertId;
+    const { otp_code , otp_expiry } = generateOTPWithExpiry(10); // 10 min expiry
 
-    if(!insertedId){
-        const err = new Error("Registration failed");
+
+
+    if (existing.length > 0 && !existing[0].is_verified) {
+      const [result] = await pool.query(
+        `UPDATE users 
+         SET password = ?, otp_code = ?, otp_expiry = ?
+         WHERE email = ?`,
+        [hashedPassword, otp_code, otp_expiry, email]
+      );
+
+      if (result.affectedRows === 0) {
+        const err = new Error("Failed to update existing unverified user");
         err.status = 500;
         throw err;
+      }
+    } else {
+      const [result] = await pool.query(
+        `INSERT INTO users (email, password, otp_code, otp_expiry)
+         VALUES (?, ?, ?, ?)`,
+        [email, hashedPassword, otp_code, otp_expiry]
+      );
+
+      if (result.insertId === 0) {
+        const err = new Error("Registration failed: could not insert user");
+        err.status = 500;
+        throw err;
+      }
+    }
+
+    const { text, html } = registrationOTPTemplate(otp_code, 10);
+
+    const success = await sendEmail(
+      email,
+      "[HarborPulse] Verify your email",
+      text,
+      html
+  );
+
+    if (!success) {
+      const err = new Error("Failed to send verification email");
+      err.status = 500;
+      throw err;
     }
 
     res.status(201).json({
-        success: true,
-        message: "User registered successfully",
-        userId: insertedId
+      success: true,
+      message: "Registration OTP sent successfully",
     });
-}
+};
 
 exports.loginUser = async (req, res) => {
     const {username, password} = req.body;
