@@ -15,6 +15,22 @@ exports.getHarbors = async (req, res) => {
     });
 }
 
+exports.getHarborById = async(req, res) =>{
+    const harborId = req.params.id;
+    const [rows] = await pool.query("SELECT * FROM harbors WHERE harbor_id = ?", harborId);
+
+    if (!rows.length) {
+        const err = new Error("No harbor found");
+        err.status = 404;
+        throw err;
+    }
+
+    res.json({
+        success: true, 
+        data: rows
+    });
+}
+
 exports.getHarborStatus = async( req, res) => {
     const harborId = req.params.id;
     const [rows] = await pool.query(`

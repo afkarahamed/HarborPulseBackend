@@ -9,12 +9,14 @@ const requireAdmin = require("../middleware/requireAdmin");
 const requireLogin = require("../middleware/requireLogin");
 
 
-const {getHarbors, getHarborStatus, postHarborStatus} = require("../controllers/harbors.controller");
+const {getHarbors, getHarborById, getHarborStatus, postHarborStatus} = require("../controllers/harbors.controller");
 
 router.get("/", asyncHandler(getHarbors));
 
+router.get("/:id", asyncHandler(getHarborById));
+
 router.get("/:id/status", auth, requireLogin, validate(getHarborStatusSchema), asyncHandler(getHarborStatus));
 
-router.post("/:id/status", auth, requireAdmin, validate(postHarborStatusSchema), asyncHandler(postHarborStatus));
+router.patch("/:id/status", auth, requireAdmin, validate(postHarborStatusSchema), asyncHandler(postHarborStatus));
 
 module.exports = router;
