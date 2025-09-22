@@ -8,7 +8,7 @@ const jwtSecret = config.get("jwt.secret");
 const jwtExpiresIn = config.get("jwt.expiresIn");
 
 const sendEmail = require("../services/email");
-const {registrationOTPTemplate} = require("../services/emailTemplate");
+const {registrationOTPTemplate, forgotPasswordOTPTemplate} = require("../services/emailTemplate");
 
 
 function generateOTP(length = 6) {
@@ -145,17 +145,17 @@ exports.verifyUser = async (req, res) => {
 }
 
 exports.loginUser = async (req, res) => {
-    const {username, password} = req.body;
+    const {email, password} = req.body;
 
-    if(!username || !password){
+    if(!email || !password){
         const err = new Error ("Invalid Credentials");
         err.status = 400;
         throw err;
     }
 
     const [rows] = await pool.query(
-        "SELECT * FROM users WHERE username = ?",
-        [username]
+        "SELECT * FROM users WHERE email = ?",
+        [email]
     );
     if (!rows.length) {
         const err = new Error("Invalid credentials");
@@ -182,8 +182,172 @@ exports.loginUser = async (req, res) => {
         token,
         user: {
             user_id: user.user_id,
-            username: user.username,
+            email: user.email,
             role: user.role
         }
     });
+}
+
+exports.forgotPassword = async (req, res) => {
+  const {email} = req.body;
+
+  const [rows] = await pool.query(`
+    SELECT user_id, is_verified
+    FROM users
+    WHERE email = ?
+    `, [email]);
+
+    if(!rows.length){
+      const err = new Error("User Not Found");
+      err.status = 404;
+      throw err;
+    }
+
+    const user = rows[0];
+    
+    if(!user.is_verified){
+      const err = new Error("User Not Verified");
+      err.status = 400;
+      throw err;
+    }
+
+    const { otp_code , otp_expiry } = generateOTPWithExpiry(10); // 10 min expiry
+
+    const [result] = await pool.query(`
+        UPDATE users 
+        SET otp_code = ?, otp_expiry = ?
+        WHERE email = ?`,
+        [otp_code, otp_expiry, email]
+    );
+    
+    if (result.affectedRows === 0) {
+      const err = new Error("Failed to set OTP for password reset");
+      err.status = 500;
+      throw err;
+    }
+
+    const {text, html} = forgotPasswordOTPTemplate(otp_code, 10);
+
+    const success = await sendEmail(
+      email,
+      "[HarborPulse] Password Reset Request",
+      text,
+      html
+  );
+
+    if (!success) {
+      const err = new Error("Failed to send password reset email");
+      err.status = 500;
+      throw err;
+    }
+
+    res.json({
+      success: true,
+      message: "Password reset OTP sent successfully",
+    });
+}
+
+exports.verifyForgotPasswordOTP = async (req, res) => {
+  const {email, otp} = req.body;
+
+  if(!email || !otp){
+    const err = new Error("Email and OTP are required");
+    err.status = 400;
+    throw err;
+  }
+
+  const [rows] = await pool.query(`
+    SELECT user_id, otp_code, otp_expiry 
+    FROM users
+    WHERE email = ?
+    `, [email]);
+
+    if(!rows.length){
+      const err = new Error("User Not Found");
+      err.status = 404;
+      throw err;
+    }
+
+    const user = rows[0];
+
+    if(user.otp_code !== otp || new Date(user.otp_expiry) < new Date()){
+      const err = new Error("Invalid or Expired OTP");
+      err.status = 400;
+      throw err;
+    }
+
+    const [result] = await pool.query(`
+      UPDATE users
+      SET otp_code = NULL, otp_expiry = NULL
+      WHERE email = ?
+    `, [email]);
+
+    if (result.affectedRows === 0) {
+      const err = new Error("Failed to verify OTP");
+      err.status = 500;
+      throw err;
+    }
+
+    const token = jwt.sign(
+        {email: email, 
+          purpose: 'password_reset'
+        },
+        jwtSecret,
+        {expiresIn: "10m"} //epxpires in 10 minutes
+    );
+
+    res.json({
+      success: true,
+      token,
+      message: "OTP verified successfully"
+    });
+  }
+
+  exports.resetPassword = async (req, res) => {
+    const {token, newPassword} = req.body;
+
+    if(!token || !newPassword){
+      const err = new Error("Token and new password are required");
+      err.status = 400;
+      throw err;
+    }
+
+    let decoded = verifyPasswordResetToken(token);
+
+    const email = decoded.email;
+    console.log(email);
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log(hashedPassword);
+    const [result] = await pool.query(`
+      UPDATE users
+      SET password = ?
+      WHERE email = ?
+    `, [hashedPassword, email]);
+
+    if (result.affectedRows === 0) {
+      const err = new Error("Failed to reset password");
+      err.status = 500;
+      throw err;
+    }
+    res.json({
+      success: true,
+      message: "Password reset successfully"
+    });
+
+  }
+
+
+  function verifyPasswordResetToken(token) {
+  try {
+    const decoded = jwt.verify(token, config.get("jwt.secret"));
+
+    if (decoded.purpose !== "password_reset") {
+      throw new Error("Invalid token purpose");
+    }
+
+    return decoded;
+  } catch (err) {
+    throw new Error("Invalid or expired reset token");
+  }
 }
