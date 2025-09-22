@@ -304,21 +304,11 @@ exports.verifyForgotPasswordOTP = async (req, res) => {
   }
 
   exports.resetPassword = async (req, res) => {
-    const {token, newPassword} = req.body;
+    const {newPassword} = req.body;
 
-    if(!token || !newPassword){
-      const err = new Error("Token and new password are required");
-      err.status = 400;
-      throw err;
-    }
-
-    let decoded = verifyPasswordResetToken(token);
-
-    const email = decoded.email;
-    console.log(email);
+    const email = req.user.email;
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    console.log(hashedPassword);
     const [result] = await pool.query(`
       UPDATE users
       SET password = ?
@@ -336,18 +326,3 @@ exports.verifyForgotPasswordOTP = async (req, res) => {
     });
 
   }
-
-
-  function verifyPasswordResetToken(token) {
-  try {
-    const decoded = jwt.verify(token, config.get("jwt.secret"));
-
-    if (decoded.purpose !== "password_reset") {
-      throw new Error("Invalid token purpose");
-    }
-
-    return decoded;
-  } catch (err) {
-    throw new Error("Invalid or expired reset token");
-  }
-}
